@@ -35,6 +35,23 @@ function checkInstall(install) {
     return { ok: true };
 }
 
+// The folder and interpreter come from the renderer, and the interpreter gets
+// executed — so only accept something that looks like a local Python binary.
+// Network (UNC) paths are refused: they would let a remote share supply the exe.
+const PYTHON_NAME = /^python[\d.]*(\.exe)?$/i;
+const isNetworkPath = (p) => /^(\\\\|\/\/)/.test(p);
+
+function checkTrustedPaths(install) {
+    if (!install) return { ok: true };
+    if (isNetworkPath(install.dir) || isNetworkPath(install.python)) {
+        return { ok: false, error: 'Network paths are not allowed for the Wan2GP folder or Python — use a local folder.' };
+    }
+    if (!PYTHON_NAME.test(path.basename(install.python.replace(/\\/g, '/')))) {
+        return { ok: false, error: `Not a Python interpreter: ${install.python} — choose a python / python.exe file.` };
+    }
+    return { ok: true };
+}
+
 // Status of each requested model type in the installed Wan2GP:
 //   'available'     — <dir>/defaults/<type>.json exists and one of its weight files is in ckpts/
 //   'missing'       — the model is defined but its weights are not downloaded yet
@@ -197,6 +214,7 @@ function dryRun({ install, settings, runDir }) {
 
 module.exports = {
     checkInstall,
+    checkTrustedPaths,
     defaultPythonPath,
     dryRun,
     killTree,

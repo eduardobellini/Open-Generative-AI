@@ -37,7 +37,13 @@ export function middleware(request) {
 
         if (url.pathname.startsWith('/api/v1') && !isHandledByRoute) {
             const targetUrl = new URL(url.pathname + url.search, 'https://api.muapi.ai');
-            const rewriteResponse = NextResponse.rewrite(targetUrl);
+            // Auth is the x-api-key header. Never forward browser cookies: on
+            // localhost they belong to whatever other apps run on this machine.
+            const forwardedHeaders = new Headers(request.headers);
+            forwardedHeaders.delete('cookie');
+            const rewriteResponse = NextResponse.rewrite(targetUrl, {
+                request: { headers: forwardedHeaders },
+            });
             return addSecurityHeaders(rewriteResponse);
         }
     }

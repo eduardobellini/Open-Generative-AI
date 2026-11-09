@@ -720,7 +720,7 @@ export function LipSyncStudio() {
             if (capturedRequestId) removePendingJob(capturedRequestId);
             console.error(e);
             hero.classList.remove('opacity-0', 'scale-95', '-translate-y-10', 'pointer-events-none');
-            generateBtn.innerHTML = `Error: ${e.message.slice(0, 60)}`;
+            generateBtn.textContent = `Error: ${String(e.message).slice(0, 60)}`;
             setTimeout(() => { generateBtn.innerHTML = t('common.generate'); }, 4000);
         } finally {
             generateBtn.disabled = false;

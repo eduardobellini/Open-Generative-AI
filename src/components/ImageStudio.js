@@ -1022,13 +1022,17 @@ export function ImageStudio() {
             thumb.className = `relative group/thumb cursor-pointer rounded-xl overflow-hidden border-2 transition-all duration-300 ${idx === 0 ? 'border-primary shadow-glow' : 'border-white/10 hover:border-white/30'}`;
 
             thumb.innerHTML = `
-                <img src="${entry.url}" alt="${entry.prompt?.substring(0, 30) || 'Generated'}" class="w-full aspect-square object-cover">
+                <img alt="Generated" class="w-full aspect-square object-cover">
                 <div class="absolute inset-0 bg-black/60 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center gap-1">
                     <button class="hist-download p-1.5 bg-primary rounded-lg text-black hover:scale-110 transition-transform" title="Download">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                     </button>
                 </div>
             `;
+            // Set from the DOM, not the template: url/prompt are untrusted text.
+            const histImg = thumb.querySelector('img');
+            histImg.src = entry.url;
+            histImg.alt = entry.prompt?.substring(0, 30) || 'Generated';
 
             thumb.onclick = (e) => {
                 if (e.target.closest('.hist-download')) {
@@ -1210,7 +1214,7 @@ export function ImageStudio() {
                 console.error('[Local] generation error:', e);
                 hero.classList.remove('opacity-0', 'scale-95', '-translate-y-10', 'pointer-events-none');
                 console.error('[Local] full error:', e.message);
-                generateBtn.innerHTML = `Error: ${e.message.slice(0, 120)}`;
+                generateBtn.textContent = `Error: ${String(e.message).slice(0, 120)}`;
                 setTimeout(() => { generateBtn.innerHTML = t('common.generate'); }, 6000);
             } finally {
                 generateBtn.disabled = false;

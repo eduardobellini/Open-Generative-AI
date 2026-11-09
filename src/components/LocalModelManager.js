@@ -437,7 +437,8 @@ export function LocalModelManager() {
                 listEl.appendChild(ModelCard(m, renderModels));
             });
         } catch (err) {
-            listEl.innerHTML = `<div class="text-xs text-red-400 text-center py-4">${t('localModels.errorLoading')}${err.message}</div>`;
+            listEl.innerHTML = `<div class="text-xs text-red-400 text-center py-4"></div>`;
+            listEl.firstChild.textContent = `${t('localModels.errorLoading')}${err.message}`;
         }
     };
 

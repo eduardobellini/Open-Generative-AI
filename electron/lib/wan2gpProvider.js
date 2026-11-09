@@ -90,7 +90,7 @@ async function engineStatus(cfg = readConfig()) {
     const modelTypes = WAN2GP_CATALOG.map(m => m.modelType);
     if (mode === 'local') {
         const install = local.resolveInstall(cfg);
-        const check = local.checkInstall(install);
+        const check = checkInstallTrusted(install);
         if (!check.ok) return { ok: false, mode, error: check.error };
         return { ok: true, mode, modelStatus: local.localModelStatus(install, modelTypes) };
     }
@@ -121,7 +121,7 @@ async function check(cfg) {
     if (mode !== 'local') return { ok: false, error: 'Set the Wan2GP folder or a server URL first.' };
 
     const install = local.resolveInstall(cfg);
-    const installCheck = local.checkInstall(install);
+    const installCheck = checkInstallTrusted(install);
     if (!installCheck.ok) return { ok: false, mode, error: installCheck.error };
     if (cfg.quick) return { ok: true, mode, message: `Wan2GP folder found · python ${install.python}` };
     const settings = buildWan2gpSettings(CHECK_MODEL, { prompt: 'dry run', aspect_ratio: '16:9', seed: 1 });
@@ -134,10 +134,22 @@ async function check(cfg) {
 // ─── Inputs ───────────────────────────────────────────────────────────────────
 // Start frames are stored locally; local runs pass the path to Wan2GP, remote
 // runs upload the file to the MCP server at generation time.
+// Only image extensions are written to disk — the name comes from the renderer,
+// and an arbitrary extension would let it drop an executable here.
+const INPUT_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif']);
+
+function checkInstallTrusted(install) {
+    const trusted = local.checkTrustedPaths(install);
+    return trusted.ok ? local.checkInstall(install) : trusted;
+}
+
 function saveInput({ name, type, bytes }) {
     if (!bytes || !bytes.length) throw new Error('Empty file payload');
     fs.mkdirSync(INPUTS_DIR, { recursive: true });
     const ext = path.extname(name || '') || (type === 'image/jpeg' ? '.jpg' : '.png');
+    if (!INPUT_EXTENSIONS.has(ext.toLowerCase())) {
+        throw new Error(`Unsupported start-frame file type: ${ext} — use a PNG, JPG or WebP image.`);
+    }
     const filePath = path.join(INPUTS_DIR, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext.toLowerCase()}`);
     fs.writeFileSync(filePath, Buffer.from(bytes));
     return { url: pathToFileURL(filePath).href, path: filePath };
@@ -180,7 +192,7 @@ async function generate(params, mainWindow) {
     try {
         if (mode === 'local') {
             const install = local.resolveInstall(cfg);
-            const installCheck = local.checkInstall(install);
+            const installCheck = checkInstallTrusted(install);
             if (!installCheck.ok) throw new Error(installCheck.error);
             const settings = buildWan2gpSettings(model, params, { imageStart: imagePath });
             const { child, done } = local.runGeneration({ install, settings, runDir, onProgress: send });
@@ -238,8 +250,11 @@ function register() {
         return { ...cfg, mode: engineMode(cfg), defaultPython: cfg.dir ? local.defaultPythonPath(cfg.dir) : '' };
     });
     ipcMain.handle('wan2gp:set-config', (_, cfg) => {
+        const next = { ...readConfig(), ...cfg };
+        const trusted = local.checkTrustedPaths(local.resolveInstall(next));
+        if (!trusted.ok) return { ok: false, error: trusted.error };
         mcpClients.clear();
-        return { ok: true, config: writeConfig({ ...readConfig(), ...cfg }) };
+        return { ok: true, config: writeConfig(next) };
     });
     ipcMain.handle('wan2gp:set-url', (_, url) => {
         mcpClients.clear();

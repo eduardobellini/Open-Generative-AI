@@ -2,6 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Scripts may only come from the app bundle: blocks injected inline scripts
+         and event handlers. Media and API calls stay open to https/local files. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: file: https:; media-src 'self' data: blob: file: https:; connect-src 'self' data: blob: https: ws://localhost:* ws://127.0.0.1:*; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Open Generative AI — a free, open-source AI image and video generation studio. Generate AI images and cinematic shots with 20+ models including Flux, SDXL, Ideogram, and Midjourney." />

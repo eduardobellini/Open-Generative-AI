@@ -53,9 +53,29 @@ function createWindow() {
         console.error('did-fail-load:', code, desc);
     });
 
+    // Only hand web links to the OS. Other schemes (file:, custom protocol
+    // handlers) could launch local programs.
+    const openExternalSafely = (url) => {
+        try {
+            const { protocol } = new URL(url);
+            if (protocol === 'https:' || protocol === 'http:') shell.openExternal(url);
+            else console.warn('Blocked external open of non-web URL:', protocol);
+        } catch {
+            console.warn('Blocked external open of invalid URL');
+        }
+    };
+
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        shell.openExternal(url);
+        openExternalSafely(url);
         return { action: 'deny' };
+    });
+
+    // The window must only ever show the bundled app: a remote page loaded
+    // here would inherit the preload's IPC bridge. Send web links to the browser.
+    mainWindow.webContents.on('will-navigate', (event, url) => {
+        if (url === mainWindow.webContents.getURL()) return; // reload
+        event.preventDefault();
+        openExternalSafely(url);
     });
 
     mainWindow.once('ready-to-show', () => {
